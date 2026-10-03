@@ -1,0 +1,10 @@
+# Blue accent instead of Streamlit's default red, which reads as an error on a sales dashboard.
+# Set per mode so the app still follows the viewer's light/dark setting.
+[theme.light]
+primaryColor = "#2a78d6"
+
+[theme.dark]
+primaryColor = "#3987e5"
+
+[browser]
+gatherUsageStats = false

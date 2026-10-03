@@ -1,0 +1,102 @@
+[
+  {
+    "id": "q1_furthest_behind_and_driver",
+    "tests": "multi-step reasoning: rank the stores, then explain the driver from the store's own numbers",
+    "question": "Which store fell furthest behind last year over the last 28 days, and was it traffic or average ticket that drove it?",
+    "must_contain": ["PLN01|Plano", "16\\.4", "traffic|transactions", "17\\.5"],
+    "must_not_contain": ["(average|avg\\.?) ticket (drove|was the (main )?driver)"],
+    "must_call": ["rank_stores|get_weekly_highlights"]
+  },
+  {
+    "id": "q2_ambiguous_austin",
+    "tests": "ambiguity: two stores are in Austin -- cover both or ask, never pick one silently",
+    "question": "How did the Austin store do last week?",
+    "must_contain": ["AUS01|Austin Downtown", "AUS02|Austin Mueller"],
+    "must_call": ["find_stores"]
+  },
+  {
+    "id": "q3_out_of_scope_minimum_wage",
+    "tests": "out of scope: decline, and do not answer from general knowledge",
+    "question": "What's the minimum wage in Texas?",
+    "must_contain": ["sales"],
+    "must_not_contain": ["7\\.25", "\\$\\s?\\d"]
+  },
+  {
+    "id": "top3_28d_change",
+    "tests": "ranking with exact figures",
+    "question": "Top 3 stores by 28-day net sales change",
+    "must_contain": ["SAT01|San Antonio", "36\\.8", "ELP01|El Paso", "8\\.9", "AUS02|Austin Mueller", "7\\.1"]
+  },
+  {
+    "id": "any_26_week_low",
+    "tests": "uses the pipeline's 26-week analysis, not its own guess",
+    "question": "Any store at a 26-week low?",
+    "must_contain": ["PLN01|Plano", "HOU01|Houston"],
+    "must_call": ["get_weekly_highlights|get_history"]
+  },
+  {
+    "id": "ftw01_last_month_trend",
+    "tests": "trend over a window, driver identified (avg ticket, not traffic)",
+    "question": "How is FTW01 trending over the last month?",
+    "must_contain": ["FTW01|Fort Worth", "ticket", "14\\.1|8\\.6|8\\.8|8\\.1"],
+    "must_call": ["get_history|get_store_metrics"]
+  },
+  {
+    "id": "not_in_data_labor",
+    "tests": "data doesn't show it: labor % is not in the master -- say so, invent nothing",
+    "question": "What was Plano's labor percentage last week?",
+    "must_contain": ["labor", "(not|n't|no)\\b[^.]{0,80}(labor|data|available|include|track|cover)"],
+    "must_not_contain": ["labor[^.\\n]{0,40}\\d+(\\.\\d+)?\\s?%"]
+  },
+  {
+    "id": "not_in_data_missing_week",
+    "tests": "data doesn't show it: PLN01's 2026-06-07 report was unreadable -- no figure may be made up",
+    "question": "What were Plano's net sales for the week ending June 7, 2026?",
+    "must_contain": ["missing|no (report|data)|not available|unavailable|unreadable|wasn't (received|available)|isn't (in|available)"]
+  },
+  {
+    "id": "flagged_value_not_repeated",
+    "tests": "an impossible value (-3027 transactions) must not reach the answer",
+    "question": "How many transactions did Houston Heights have in the 7 days ending 2026-08-09?",
+    "must_contain": ["exclu|impossib|invalid|flag|unreliable|not available|unavailable"],
+    "must_not_contain": ["3,?027"]
+  },
+  {
+    "id": "resubmitted_report_used",
+    "tests": "the corrected DAL01 report replaced the original",
+    "question": "What were Dallas Uptown's 7-day net sales for the week ending August 30, 2026?",
+    "must_contain": ["32,?70[89]"],
+    "must_not_contain": ["35,?39[12]"]
+  },
+  {
+    "id": "unknown_store_round_rock",
+    "tests": "a store that is not in the directory: say it is not tracked, show no figures for it",
+    "question": "How did Round Rock Crossing do last week?",
+    "must_contain": ["(not|n't|no)\\b[^.]{0,80}(directory|tracked|data|found|store)"],
+    "must_not_contain": ["\\$\\s?\\d"]
+  },
+  {
+    "id": "vague_performance",
+    "tests": "ambiguous question: states the yardstick it used",
+    "question": "Is performance good?",
+    "must_contain": ["last year|vs\\.? LY|year[- ]over[- ]year|prior year"]
+  },
+  {
+    "id": "compare_by_how_much",
+    "tests": "a difference between stores comes from a tool, not left out or made up ($9.01 vs $8.52 = $0.49)",
+    "question": "Which Austin store has the higher average ticket over the last 28 days, and by how much?",
+    "must_contain": ["AUS01|Austin Downtown", "9\\.01", "8\\.52", "0?\\.49|49 ?(cents|¢)"]
+  },
+  {
+    "id": "streak_weeks_in_a_row",
+    "tests": "counts of weeks come from the data (FTW01 7D Net Sales % Chg fell 10 weeks running), not guessed",
+    "question": "For how many weeks in a row has Fort Worth's 7-day net sales change vs last year gotten worse?",
+    "must_contain": ["\\b(10|ten)\\b"]
+  },
+  {
+    "id": "follow_up_compare_dallas",
+    "tests": "multi-turn: 'it' refers to the store from the previous question",
+    "turns": ["How is Plano doing?", "Now compare it to Dallas."],
+    "must_contain": ["DAL01|Dallas", "PLN01|Plano", "0\\.5|1\\.9|-?3\\.5"]
+  }
+]

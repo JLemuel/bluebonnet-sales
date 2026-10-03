@@ -1,0 +1,6 @@
+# Python 3.12+. With uv: `uv sync` installs the exact locked versions from uv.lock.
+pandas>=3.0.6
+openpyxl>=3.1.5
+streamlit>=1.65.0
+openai>=3.24.0
+python-dotenv>=1.2.4
