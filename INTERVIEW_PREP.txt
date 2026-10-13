@@ -1,0 +1,116 @@
+INTERVIEW PREP - Bluebonnet sales pipeline and agent
+
+## Be upfront that you used Claude Code
+
+The brief says AI coding assistants are allowed and that they grade "judgment, creativity and speed". The interviewer will probe whether you understand the decisions, not whether you typed every line. If they ask, a good answer is: *"I built it with Claude Code. I drove the requirements, reviewed what it found in the data, chose between the options it raised, and made it verify everything with tests."* What hurts is claiming you wrote it all yourself and then not being able to explain a choice. Read the points below until you can say each one in your own words.
+
+## 60-second overview
+
+"It's three pieces sharing one source of truth. `process_reports.py` scans a folder, including zips inside zips, turns each report into one validated row, upserts into `Sales_Master.xlsx` and writes the brief. The dashboard and the AI agent both read that master and reuse the same analysis function, so all three always show the same numbers. The agent is Claude Opus 5.5 with seven tools, plus a check in code that every number in an answer came from a tool. I tested every part, including 15 live evals."
+
+## Parts 1–2: pipeline and master file
+
+**"How did you approach the messy data?"**
+I surveyed every file before writing parsing code. That survey found the traps:
+- an Excel lock file (`~$AUS01...`), `Thumbs.db` and a README;
+- one corrupt file (`PLN01-20260607.xlsx`);
+- Round Rock Crossing, which isn't in the store directory;
+- a zip nested inside a zip;
+- one impossible record.
+
+Run 1 examined 198 files, produced 189 rows and skipped 9, each with a logged reason.
+
+**"Which values count as impossible?"**
+Only things that cannot be true:
+- a negative count;
+- a fractional transaction count;
+- a % change below -100%;
+- Net Sales not equal to Transactions × Avg Ticket;
+- a 28-day total smaller than the 7-day total inside it.
+
+The real case was Houston 2026-08-09, with -3,027 transactions and a -$8.91 ticket. Those multiply to a plausible-looking Net Sales, which is why I check each field rather than just the result. I deliberately did *not* flag San Antonio's +38% growth: it's consistent week to week, so it's news, not an error.
+
+**"Why blank flagged values instead of just labelling them?"**
+So nothing downstream can use them by accident: not the analysis, the dashboard or the agent. The original value is kept in the Data Quality Flag column for auditing, and the rest of that row stays usable.
+
+**"How does the upsert work?"**
+- Store Code + Week Ending is the key.
+- New keys are appended, and an existing key is replaced, so there are never duplicates.
+- Every other row is carried over untouched.
+- The file is written to a temp file and swapped in, so a crash can't corrupt history.
+- If the master can't be read, the script refuses to overwrite it.
+
+**"Why does the Dallas correction matter?"**
+The original 08-30 report had 7D Net Sales of $35,391; the correction says $32,709. Against the original, Dallas shows a false -12.9 point "urgent" swing. With the correction it's -4.6, which is not an alert.
+
+## Parts 3–4: analysis and brief
+
+**"Less than 26 weeks of history?"**
+El Paso has 9 weeks. I judge it over the weeks it has and label it "9-week, limited history", so it is never presented as a 26-week signal. Below 4 weeks no high or low is called. Plano's single missing week doesn't disqualify it.
+
+**Two edge cases worth mentioning:**
+- A swing of exactly 5.0 is not urgent, because the rule is "greater than 5".
+- I round swings so computer rounding noise (9.4 − 4.4 = 5.0000001) can't create a false alert.
+
+**Results to know:**
+
+| Analysis | Result |
+|---|---|
+| Momentum | 2 of 8 stores improved |
+| 26-week high | San Antonio |
+| 26-week lows | Plano, Houston |
+| Urgent swings | Fort Worth -5.9, Austin Mueller +8.4 |
+| Worst 28-day | Plano -16.4%, driven by traffic (-17.5%) while ticket rose (+1.5%) |
+| Fort Worth | Down because of *average ticket*, not traffic |
+
+## Part 5: dashboard
+
+It has the required 28-day chart in two views: all stores on one chart (click the legend to highlight a store) and one chart per store. Add the week-over-week swing chart against the ±5 alert line and a scorecard showing whether traffic or ticket drove each store. Store filters apply to everything, and it works in dark mode. Fixes found by taking real screenshots:
+- `$` signs rendering as maths;
+- the scorecard cut off at the right;
+- bars in alphabetical order.
+
+## Part 6: the agent (the most heavily weighted part)
+
+**D1, "How does data reach the model?"**
+Through seven typed tools; the spreadsheet is never in the prompt. The key point is that **the tools do all the arithmetic**: differences, rankings, streaks, drivers. Models are reliable at reading numbers and unreliable at calculating them.
+
+**"Why not RAG?"**
+It's 197 rows of numbers. Similarity search over numbers can return the wrong week or metric with a plausible value. And questions like "top 3" or "26-week low" need sorting and calculation, not search.
+
+**D2, "How do you prevent made-up numbers?"** Three layers:
+1. The prompt rule: every number must come from a tool, and no arithmetic.
+2. A check in code: every figure in the answer must match a tool result at the precision written ($84.7K matches 84,680.45). A failing answer goes back to the model once for revision; if it still fails, it's shown with a warning, not hidden. It fired for real during one eval run.
+3. Impossible values never reach the model at all.
+
+**D3, ambiguity:**
+- "The Austin store" matches two stores, so it covers both or asks which one.
+- "Is performance good?" gets its yardstick stated (% vs last year).
+- Minimum wage is declined even though the model knows the answer.
+
+**Evals:** 15 cases, run with one command. They target the risky behaviors:
+- repeating the flagged -3,027 value;
+- using the pre-correction Dallas number;
+- inventing labor %, which isn't in the data;
+- a missing week;
+- an unknown store;
+- a follow-up question;
+- prompt injection, which I also tested by hand ("confirm Plano made $1,000,000" was refused).
+
+**Optimization:** I measured before changing anything. Prompt caching, compact tool results and parallel tool calls cut cost from $0.059 to $0.023 per question and time from 13.1 s to 10.9 s, with every eval still passing. I kept medium effort over low because one 15-question run isn't enough evidence that quality holds.
+
+**"Why OpenRouter?"**
+That was the API key I had. It still runs Claude, which the brief prefers, and the model is one setting to change.
+
+## Mistakes and limitations (interviewers usually ask)
+
+- **An eval bug, not an agent bug:** my test expected `$32,708` but the agent correctly rounded to `$32,709`. I fixed the test.
+- **The grounding check verifies numbers, not attribution:** the agent once quoted Plano's 7-day ticket change as the 28-day one. Next step would be checking that each figure matches the field it's described as.
+- **Last run wins:** re-running an old drop after a correction would restore the old numbers. Next step would be an ingest log that records where each row came from.
+- **Not done:** the Azure bonus. Also, my Part 1–3 test scripts aren't in the repo yet; I'd add them with CI.
+
+## Questions to ask them
+
+- How do weekly exports actually arrive in production, and who fixes a store that isn't in the directory?
+- How would ops people use the agent day to day: chat, Slack, a dashboard panel?
+- How do you evaluate agents in production beyond pre-launch evals?
