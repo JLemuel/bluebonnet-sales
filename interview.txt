@@ -1,0 +1,23 @@
+## Short interview answers
+
+**If they ask about AI tools:** "Yes, I used Claude Code, which the brief allowed. I directed it, chose between options and had everything tested."
+
+**Overview:** "One script builds a validated master file and the weekly brief. The dashboard and the AI agent both read that file and use the same analysis, so the numbers always match."
+
+**Messy data:** "I looked at every file before coding. Junk files, the corrupt Plano file and the unknown Round Rock store are logged and skipped, never crash the run."
+
+**Impossible values:** "Only values that can't be true are flagged, like Houston's negative transactions. I blank them so charts and the agent never use them, but keep the original in the flag column."
+
+**Master file:** "Store plus week is the key. New weeks are added, a resubmitted report replaces its row, and history is never lost. The Dallas correction removed a false alert."
+
+**Short history:** "El Paso has 9 weeks, so it's judged on those 9 and labelled limited history, never called a 26-week high or low."
+
+**Agent:** "Claude gets tools, not the spreadsheet. The tools do all the maths, and code checks that every number in an answer came from a tool. It covers both Austin stores, says when data is missing, and declines off-topic questions."
+
+**Why not RAG:** "The data is a small table of numbers. Exact queries are more reliable than search, and questions like 'top 3' need calculation."
+
+**Testing:** "15 live evals target the risky cases: the bad Houston value, the Dallas correction, missing data and unknown stores. All pass."
+
+**Optimization:** "Caching and fewer model calls cut cost per question by 61%, with all evals still passing."
+
+**Limitation:** "The check confirms a number came from a tool, not that it's attached to the right metric. That's what I'd fix next."
