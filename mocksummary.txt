@@ -1,0 +1,25 @@
+Here's a script you can read out in about two minutes. Say it in your own words if you can, so it doesn't sound memorised.
+
+---
+
+"Thanks for having me. I'll walk through the main decisions quickly, then I'm happy to go deeper anywhere.
+
+First, tools: I built this with Claude Code, which the brief allowed. My role was directing it, choosing between options, and making sure everything was tested.
+
+The project is three pieces sharing one source of truth. A script builds a validated master file and the weekly brief, and the dashboard and the AI agent both read that file. So all three always show the same numbers.
+
+For the messy data, I looked at every file before writing any parsing code. That's how I found the junk files, the corrupt Plano report, the Round Rock store that isn't in the directory, and the zip inside a zip. Each of those is logged and skipped, so nothing crashes the run.
+
+For validation, I only flag values that can't be true. Houston had negative transactions, for example. I blank those values so they never reach a chart or the agent, but I keep the original in the Data Quality Flag column for auditing.
+
+The master file uses store plus week as the key. New weeks are added, a resubmitted report replaces its row, and history is never lost. That mattered for Dallas: without the correction, it would have shown a false urgent alert.
+
+For stores with less than 26 weeks, like El Paso with 9, I judge them on the weeks they have and label them as limited history.
+
+For the agent, Claude gets tools, not the spreadsheet. The tools do all the maths, because models are good at reading numbers but not at calculating them. Then code checks that every number in an answer came from a tool. I chose tools over RAG because this is a small table of numbers, and questions like 'top 3' need calculation, not search.
+
+I tested it with 15 live evals aimed at the risky cases: the bad Houston value, the Dallas correction, missing data, unknown stores and off-topic questions. All of them pass. I also cut the cost per question by 61% while every eval kept passing.
+
+The main limitation is that the check confirms a number came from a tool, but not that it's attached to the right metric. That's what I'd improve next.
+
+Happy to go into any part in more detail."
